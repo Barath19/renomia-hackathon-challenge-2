@@ -1,0 +1,38 @@
+steps:
+  # Build the app image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_AR_REPO}/${_SERVICE_NAME}:${COMMIT_SHA}"
+      - "."
+
+  # Push to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_AR_REPO}/${_SERVICE_NAME}:${COMMIT_SHA}"
+
+  # Deploy multi-container Cloud Run service
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: bash
+    args:
+      - "-c"
+      - |
+        sed -e "s|__APP_IMAGE__|${_AR_REPO}/${_SERVICE_NAME}:${COMMIT_SHA}|g" \
+            -e "s|__SERVICE_NAME__|${_SERVICE_NAME}|g" \
+            -e "s|__GEMINI_API_KEY__|${_GEMINI_API_KEY}|g" \
+            -e "s|__PARTICIPANT_SA__|${_PARTICIPANT_SA}|g" \
+            service.yaml > /tmp/service.yaml
+        gcloud run services replace /tmp/service.yaml --region=${_REGION}
+
+# These substitutions are set per-team in the Cloud Build trigger by the admin
+substitutions:
+  _SERVICE_NAME: "team-CHANGEME"
+  _REGION: "europe-west1"
+  _AR_REPO: "europe-west1-docker.pkg.dev/${PROJECT_ID}/hackathon"
+  _GEMINI_API_KEY: ""
+  _PARTICIPANT_SA: ""
+
+images:
+  - "${_AR_REPO}/${_SERVICE_NAME}:${COMMIT_SHA}"
