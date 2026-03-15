@@ -116,9 +116,18 @@ def reset_metrics():
 EXTRACTION_PROMPT = """You are an expert Czech insurance document analyst. Your accuracy is paramount — errors in extraction lead to financial penalties and regulatory non-compliance. Extract structured CRM fields from the provided insurance contract documents.
 
 STEP-BY-STEP PROCESS:
-1. First, read the MAIN CONTRACT and extract all fields from it. This is your base.
-2. Then, for each AMENDMENT in order, identify ONLY the fields it explicitly changes. Apply those changes to your base values.
-3. The final result is the base values with all amendment overrides applied.
+1. First, read the MAIN CONTRACT and extract all fields from it. This is your base row.
+2. Then, for each AMENDMENT in chronological order, create a new row with ONLY the fields it explicitly changes (leave others blank).
+3. Build a mental tracking table:
+
+   | Field              | Main Contract | Amendment #1 | Amendment #2 | → FINAL |
+   |--------------------|---------------|-------------|-------------|---------|
+   | premium            | 50000         | 62000       |             | → 62000 |
+   | installment        | 1 (ročně)     |             | 4 (čtvrt.)  | → 4     |
+   | endAt              | 01.01.2026    |             |             | → 01.01.2026 |
+
+4. For each field, the FINAL value = last non-blank entry reading left to right (latest amendment wins).
+5. Return ONLY the final values as JSON.
 
 RULES:
 - Documents are provided in override order: VPP (general terms) first as context, then the main contract, then amendments in chronological order.
